@@ -32,7 +32,7 @@ public class SteamSqexLauncher : SqexLauncher
         this.steamTicketData = steamTicketData;
     }
 
-    public override async Task<LoginResult> Login(string userName, string password, string otp, bool useCache, DirectoryInfo gamePath, bool forceBaseVersion, bool isFreeTrial)
+    public override async Task<LoginResult> Login(string userName, string password, string otp, string recaptchaToken, bool useCache, DirectoryInfo gamePath, bool forceBaseVersion, bool isFreeTrial)
     {
         Log.Information("SteamSqexLauncher::Login(cache:{UseCache})", useCache);
 
@@ -96,7 +96,7 @@ public class SteamSqexLauncher : SqexLauncher
             throw new SteamException("Steam auth ticket was null.");
         }
 
-        return await base.Login(userName, password, otp, useCache, gamePath, forceBaseVersion, isFreeTrial);
+        return await base.Login(userName, password, otp, recaptchaToken, useCache, gamePath, forceBaseVersion, isFreeTrial);
     }
 
     protected override void ModifyGameLaunchOptions(Dictionary<string, string> environment, ArgumentBuilder argumentBuilder)
@@ -136,7 +136,7 @@ public class SteamSqexLauncher : SqexLauncher
         return url;
     }
 
-    protected override async Task<OauthLoginResult> OauthLogin(string userName, string password, string otp, bool isFreeTrial, int region)
+    protected override async Task<OauthLoginResult> OauthLogin(string userName, string password, string otp, string recaptchaToken, bool isFreeTrial, int region)
     {
         if (this.steamTicket == null)
             throw new ArgumentNullException(nameof(this.steamTicket), "isSteam, but steamTicket == null");
@@ -149,7 +149,7 @@ public class SteamSqexLauncher : SqexLauncher
 
         userName = topResult.Text;
 
-        return await DoOauthLogin(topResult.Stored, topUrl, userName, password, otp);
+        return await DoOauthLogin(topResult.Stored, topUrl, userName, password, otp, recaptchaToken);
     }
 }
 

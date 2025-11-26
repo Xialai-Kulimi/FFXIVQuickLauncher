@@ -183,11 +183,11 @@ public class Program
     }
 
     [UnmanagedCallersOnly(EntryPoint = "tryLoginToGame")]
-    public static nint TryLoginToGame(nint username, nint password, nint otp, bool repair)
+    public static nint TryLoginToGame(nint username, nint password, nint otp, nint recaptchaToken, bool repair)
     {
         try
         {
-            return MarshalUtf8.StringToHGlobal(LaunchServices.TryLoginToGame(Marshal.PtrToStringUTF8(username)!, Marshal.PtrToStringUTF8(password)!, Marshal.PtrToStringUTF8(otp)!, repair).Result);
+            return MarshalUtf8.StringToHGlobal(LaunchServices.TryLoginToGame(Marshal.PtrToStringUTF8(username)!, Marshal.PtrToStringUTF8(password)!, Marshal.PtrToStringUTF8(otp)!,Marshal.PtrToStringUTF8(recaptchaToken)!, repair).Result);
         }
         catch (AggregateException ex)
         {

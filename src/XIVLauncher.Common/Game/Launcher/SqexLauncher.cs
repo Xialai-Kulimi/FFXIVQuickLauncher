@@ -14,6 +14,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Text.Json;
+using Newtonsoft.Json;
 using Serilog;
 using XIVLauncher.Common.Game.Patch.PatchList;
 using XIVLauncher.Common.Encryption;
@@ -63,7 +64,7 @@ public class SqexLauncher : ILauncher
         "ffxivupdater64.exe"
     };
 
-    public virtual async Task<LoginResult> Login(string userName, string password, string otp, bool useCache, DirectoryInfo gamePath, bool forceBaseVersion, bool isFreeTrial)
+    public virtual async Task<LoginResult> Login(string userName, string password, string otp, string recaptchaToken, bool useCache, DirectoryInfo gamePath, bool forceBaseVersion, bool isFreeTrial)
     {
         PatchListEntry[] pendingPatches = Array.Empty<PatchListEntry>();
 
@@ -73,7 +74,7 @@ public class SqexLauncher : ILauncher
 
         if (!useCache || !this.uniqueIdCache.TryGet(userName, out var cached))
         {
-            this.oauthLoginResult = await OauthLogin(userName, password, otp, isFreeTrial, 3);
+            this.oauthLoginResult = await OauthLogin(userName, password, otp, recaptchaToken, isFreeTrial, 3);
 
             Log.Information(
                 $"OAuth login successful - playable:{oauthLoginResult.Playable} terms:{oauthLoginResult.TermsAccepted} region:{oauthLoginResult.Region} expack:{oauthLoginResult.MaxExpansion}");
@@ -419,14 +420,14 @@ public class SqexLauncher : ILauncher
         return $"https://ffxiv-login.square-enix.com/oauth/ffxivarr/login/top?lng=en&rgn={region}&isft={(isFreeTrial ? "1" : "0")}&cssmode=1&isnew=1&launchver=3";
     }
 
-    protected virtual async Task<OauthLoginResult> OauthLogin(string userName, string password, string otp, bool isFreeTrial, int region)
+    protected virtual async Task<OauthLoginResult> OauthLogin(string userName, string password, string otp, string recaptchaToken, bool isFreeTrial, int region)
     {
         var topUrl = GetOauthTopUrl(region, isFreeTrial);
         var topResult = await GetOauthTop(topUrl);
 
         try
         {
-            return await DoOauthLogin(topResult.Stored, topUrl, userName, password, otp);
+            return await DoOauthLogin(topResult.Stored, topUrl, userName, password, otp, recaptchaToken);
         }
         catch (SteamLinkNeededException ex)
         {
@@ -434,33 +435,22 @@ public class SqexLauncher : ILauncher
         }
     }
 
-    protected async Task<OauthLoginResult> DoOauthLogin(string stored, string topUrl, string userName, string password, string otp)
+    protected async Task<OauthLoginResult> DoOauthLogin(string stored, string topUrl, string userName, string password, string otp, string recaptchaToken)
     {
-        var request = new HttpRequestMessage(HttpMethod.Post,
-                                             "https://ffxiv-login.square-enix.com/oauth/ffxivarr/login/login.send");
+        // TODO(Kulimi): Use recaptchaToken here 
 
-        request.Headers.AddWithoutValidation("Accept", "image/gif, image/jpeg, image/pjpeg, application/x-ms-application, application/xaml+xml, application/x-ms-xbap, */*");
-        request.Headers.AddWithoutValidation("Referer", topUrl);
-        request.Headers.AddWithoutValidation("Accept-Language", this.settings.AcceptLanguage);
-        request.Headers.AddWithoutValidation("User-Agent", userAgent);
-        //request.Headers.AddWithoutValidation("Content-Type", "application/x-www-form-urlencoded");
-        request.Headers.AddWithoutValidation("Accept-Encoding", "gzip, deflate");
-        request.Headers.AddWithoutValidation("Host", "ffxiv-login.square-enix.com");
-        request.Headers.AddWithoutValidation("Connection", "Keep-Alive");
-        request.Headers.AddWithoutValidation("Cache-Control", "no-cache");
-        request.Headers.AddWithoutValidation("Cookie", "_rsid=\"\"");
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "https://user.ffxiv.com.tw/api/login/launcherLogin");
+        var loginData = new Dictionary<string, string>
+        {
+            { "email", ToHexString(userName).ToLowerInvariant() },
+            { "password", ToHexString(password).ToLowerInvariant() },
+            { "code", otp },
+            { "token", recaptchaToken }
 
-        request.Content = new FormUrlEncodedContent(
-            new Dictionary<string, string>
-            {
-                { "_STORED_", stored },
-                { "sqexid", userName },
-                { "password", password },
-                { "otppw", otp },
-                // { "saveid", "1" } // NOTE(goat): This adds a Set-Cookie with a filled-out _rsid value in the login response.
-            });
-
-        var response = await this.client.SendAsync(request);
+        };
+        var content = new StringContent(JsonConvert.SerializeObject(loginData), Encoding.UTF8, "application/json");
+        httpRequest.Content = content;
+        var response = await this.client.SendAsync(httpRequest);
 
         var reply = await response.Content.ReadAsStringAsync();
 
@@ -480,6 +470,14 @@ public class SqexLauncher : ILauncher
             Playable = launchParams[9] != "0",
             MaxExpansion = int.Parse(launchParams[13])
         };
+        string ToHexString(string str)
+        {
+            var bytes = Encoding.UTF8.GetBytes(str);
+            var stringBuilder = new StringBuilder(bytes.Length + bytes.Length);
+            foreach (var num in bytes)
+                stringBuilder.Append(num.ToString("x2"));
+            return stringBuilder.ToString();
+        }
     }
 
     private static string GetFileHash(string file)
@@ -502,7 +500,7 @@ public class SqexLauncher : ILauncher
                 await DownloadAsLauncher(
                     $"https://frontier.ffxiv.com/worldStatus/gate_status.json?lang={language.GetLangCode()}&_={ApiHelpers.GetUnixMillis()}", language).ConfigureAwait(true));
 
-            return JsonSerializer.Deserialize<GateStatus>(reply);
+            return System.Text.Json.JsonSerializer.Deserialize<GateStatus>(reply);
         }
         catch (Exception exc)
         {

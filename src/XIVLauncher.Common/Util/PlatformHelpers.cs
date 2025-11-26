@@ -76,17 +76,13 @@ public static class PlatformHelpers
 
     public static bool IsElevated()
     {
-        switch (Environment.OSVersion.Platform)
-        {
-            case PlatformID.Win32NT:
-                return new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
+        if (OperatingSystem.IsWindows())
+            return new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
 
-            case PlatformID.Unix:
-                return geteuid() == 0;
+        if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+            return geteuid() == 0;
 
-            default:
-                return false;
-        }
+        return false;
     }
 
     public static void Untar(string path, string output)

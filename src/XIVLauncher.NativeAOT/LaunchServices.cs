@@ -31,11 +31,11 @@ public static class LaunchServices
         Fake,
     }
 
-    public static async Task<string> TryLoginToGame(string username, string password, string otp, bool repair)
+    public static async Task<string> TryLoginToGame(string username, string password, string otp, string recaptchaToken, bool repair)
     {
         var action = repair ? LoginAction.Repair : LoginAction.Game;
 
-        var result = await TryLoginToGame(username, password, otp, action).ConfigureAwait(false);
+        var result = await TryLoginToGame(username, password, otp, recaptchaToken, action).ConfigureAwait(false);
 
         return JsonSerializer.Serialize(result, ProgramJsonContext.Default.LoginResult);
     }
@@ -85,7 +85,7 @@ public static class LaunchServices
         }
     }
 
-    private static async Task<LoginResult> TryLoginToGame(string username, string password, string otp, LoginAction action)
+    private static async Task<LoginResult> TryLoginToGame(string username, string password, string otp, string recaptchaToken, LoginAction action)
     {
         try
         {
@@ -94,9 +94,9 @@ public static class LaunchServices
 
             EnsureLauncherAffinity((License)Program.Config.License);
             if (action == LoginAction.Repair)
-                return await Program.Launcher!.Login(username, password, otp, false, gamePath, true, Program.Config.IsFt.GetValueOrDefault(false)).ConfigureAwait(false);
+                return await Program.Launcher!.Login(username, password, otp, recaptchaToken, false, gamePath, true, Program.Config.IsFt.GetValueOrDefault(false)).ConfigureAwait(false);
             else
-                return await Program.Launcher!.Login(username, password, otp, enableUidCache, gamePath, false, Program.Config.IsFt.GetValueOrDefault(false)).ConfigureAwait(false);
+                return await Program.Launcher!.Login(username, password, otp, recaptchaToken, enableUidCache, gamePath, false, Program.Config.IsFt.GetValueOrDefault(false)).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

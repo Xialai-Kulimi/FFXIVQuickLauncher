@@ -13,7 +13,7 @@ public interface ILauncher
     public Task<PatchListEntry[]> CheckGameVersion(DirectoryInfo gamePath, bool forceBaseVersion = false);
 
     // TODO(Ava): KR/CN probably don't need isFreeTrial, figure out how to abstract this better
-    public Task<LoginResult> Login(string userName, string password, string otp, bool useCache, DirectoryInfo gamePath, bool forceBaseVersion, bool isFreeTrial);
+    public Task<LoginResult> Login(string userName, string password, string otp, string recaptchaToken, bool useCache, DirectoryInfo gamePath, bool forceBaseVersion, bool isFreeTrial);
 
     public Process? LaunchGame(IGameRunner runner, string sessionId, int region, int expansionLevel,
                                string additionalArguments, DirectoryInfo gamePath,

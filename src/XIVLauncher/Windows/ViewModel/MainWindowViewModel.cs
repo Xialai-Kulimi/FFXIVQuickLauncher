@@ -294,7 +294,7 @@ namespace XIVLauncher.Windows.ViewModel
 
             if (!doingAutoLogin) App.Settings.AutologinEnabled = IsAutoLogin;
 
-            var loginResult = await TryLoginToGame(username, password, otp, isSteam, action).ConfigureAwait(false);
+            var loginResult = await TryLoginToGame(username, password, otp, recaptchaToken, isSteam, action).ConfigureAwait(false);
             if (loginResult == null)
                 return;
 
@@ -373,7 +373,7 @@ namespace XIVLauncher.Windows.ViewModel
             return true;
         }
 
-        private async Task<Launcher.LoginResult> TryLoginToGame(string username, string password, string otp, bool isSteam, AfterLoginAction action)
+        private async Task<Launcher.LoginResult> TryLoginToGame(string username, string password, string otp, string recaptchaToken, bool isSteam, AfterLoginAction action)
         {
             bool? loginStatus = null;
 
