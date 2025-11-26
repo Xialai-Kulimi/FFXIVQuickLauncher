@@ -196,10 +196,11 @@ namespace XIVLauncher.Windows.ViewModel
         {
             ProblemCheck.RunCheck(_window);
 
-            var bootRes = await HandleBootCheck().ConfigureAwait(false);
+            // NOTE(Kulimi): Disabled for now, since there no boot for TC Server
+            // var bootRes = await HandleBootCheck().ConfigureAwait(false);
 
-            if (!bootRes)
-                return;
+            // if (!bootRes)
+            //     return;
 
             var cutoffText = Loc.Localize("KillswitchText", "XIVLauncher cannot start the game at this time, as there were changes to the login process during a recent patch." +
                                                             "\nWe need to adjust to these changes and verify that our adjustments are safe before we can re-enable the launcher. Please try again later." +
@@ -238,14 +239,15 @@ namespace XIVLauncher.Windows.ViewModel
                 return;
             }
 
-            if (username.Contains("@"))
-            {
-                CustomMessageBox.Show(
-                    Loc.Localize("EmailUsernameError", "Please enter your SE account name, not your email address."),
-                    "XIVLauncher", MessageBoxButton.OK, MessageBoxImage.Error, parentWindow: _window);
+            // Note(Kulimi): Remove since TC server use email as username
+            // if (username.Contains("@"))
+            // {
+            //     CustomMessageBox.Show(
+            //         Loc.Localize("EmailUsernameError", "Please enter your SE account name, not your email address."),
+            //         "XIVLauncher", MessageBoxButton.OK, MessageBoxImage.Error, parentWindow: _window);
 
-                return;
-            }
+            //     return;
+            // }
 
             if (string.IsNullOrEmpty(password))
             {
