@@ -319,8 +319,10 @@ public class SqexLauncher : ILauncher
             throw new VersionCheckLoginException(LoginState.NoLogin);
         }
 
+        // var request = new HttpRequestMessage(HttpMethod.Post,
+        //     $"https://patch-gamever.ffxiv.com/http/win32/ffxivneo_release_game/{(forceBaseVersion ? Constants.BASE_GAME_VERSION : Repository.Ffxiv.GetVer(gamePath))}/{this.oauthLoginResult.SessionId}");
         var request = new HttpRequestMessage(HttpMethod.Post,
-            $"https://patch-gamever.ffxiv.com/http/win32/ffxivneo_release_game/{(forceBaseVersion ? Constants.BASE_GAME_VERSION : Repository.Ffxiv.GetVer(gamePath))}/{this.oauthLoginResult.SessionId}");
+                                             $"http://patch-gamever.ffxiv.com.tw/http/win32/ffxivtc_release_tc_game/{(forceBaseVersion ? Constants.BASE_GAME_VERSION : Repository.Ffxiv.GetVer(gamePath))}/{this.oauthLoginResult.SessionId}");
 
         request.Headers.AddWithoutValidation("Connection", "Keep-Alive");
         request.Headers.AddWithoutValidation("User-Agent", Constants.PatcherUserAgent);
@@ -437,7 +439,6 @@ public class SqexLauncher : ILauncher
 
     protected async Task<OauthLoginResult> DoOauthLogin(string stored, string topUrl, string userName, string password, string otp, string recaptchaToken)
     {
-        // TODO(Kulimi): Use recaptchaToken here 
 
         var httpRequest = new HttpRequestMessage(HttpMethod.Post, "https://user.ffxiv.com.tw/api/login/launcherLogin");
         var loginData = new Dictionary<string, string>
@@ -454,21 +455,38 @@ public class SqexLauncher : ILauncher
 
         var reply = await response.Content.ReadAsStringAsync();
 
-        var regex = new Regex(@"window.external.user\(""login=auth,ok,(?<launchParams>.*)\);");
-        var matches = regex.Matches(reply);
+        // var regex = new Regex(@"window.external.user\(""login=auth,ok,(?<launchParams>.*)\);");
+        // var matches = regex.Matches(reply);
 
-        if (matches.Count == 0)
-            throw new OauthLoginException(reply);
+        // if (matches.Count == 0)
+        //     throw new OauthLoginException(reply);
 
-        var launchParams = matches[0].Groups["launchParams"].Value.Split(',');
+        // var launchParams = matches[0].Groups["launchParams"].Value.Split(',');
 
+        var loginResult = JsonConvert.DeserializeObject<Dictionary<string, object>>(reply);
+        Log.Information("loginResult: {LoginResult}", loginResult);
+        if (loginResult.TryGetValue("error", out var error) || !loginResult.TryGetValue("token", out var sessionId))
+        {
+            throw new OauthLoginException($"Login failed: {error}");
+        }
+        var remainSeconds = int.Parse(loginResult["remain"].ToString() ?? "0");
+
+        // return new OauthLoginResult
+        // {
+        //     SessionId = launchParams[1],
+        //     Region = int.Parse(launchParams[5]),
+        //     TermsAccepted = launchParams[3] != "0",
+        //     Playable = launchParams[9] != "0",
+        //     MaxExpansion = int.Parse(launchParams[13])
+        // };
+        // TODO: check loginResult to map more params in OauthLoginResult
         return new OauthLoginResult
         {
-            SessionId = launchParams[1],
-            Region = int.Parse(launchParams[5]),
-            TermsAccepted = launchParams[3] != "0",
-            Playable = launchParams[9] != "0",
-            MaxExpansion = int.Parse(launchParams[13])
+            SessionId = sessionId.ToString(),
+            Region = 1, // Taiwan No 1!!
+            TermsAccepted = true,
+            Playable = remainSeconds > 0,
+            MaxExpansion = 7
         };
         string ToHexString(string str)
         {
